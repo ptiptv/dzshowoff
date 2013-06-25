@@ -102,26 +102,9 @@ func loadslides() show {
 	slidestrings := strings.Split(slidedata, "!SLIDE")
 	var slides []slide
 	for _, s := range slidestrings[1:] {
-		splits := strings.SplitN(s, "\n", 2)
-		if len(splits) < 2 {
-			continue
-		}
-		slidetype := strings.Trim(splits[0], " \t")
-		_ = slidetype // TODO(augie): figure out how to use this data
-		splits = strings.SplitN(splits[1], ".notes", 2)
-		content := strings.Trim(splits[0], " \t\r\n")
-		notes := ""
-		if len(splits) == 2 {
-			notes = strings.Trim(splits[1], " \t\r\n")
-		}
-
-		p := markdown.NewParser(&markdown.Extensions{})
-		dest := bytes.NewBuffer(nil)
-		p.Markdown(bytes.NewBuffer([]byte(content)), markdown.ToHTML(dest))
-
+		content, notes := htmlSlide(s)
 		slides = append(slides, slide{
-			// TODO(augie): stop using this horrible hack for images!
-			Content: strings.Replace(dest.String(), "<img src=\"", "<img src=\"images/", -1),
+			Content: content,
 			Notes:   notes,
 		})
 	}
@@ -134,6 +117,28 @@ func loadslides() show {
 		},
 		Images: images,
 	}
+}
+
+// htmlSlide transforms the markdown slide source into html for a
+// slide, and a string of the speaker notes for that slide.
+func htmlSlide(mdown string) (string, string) {
+	splits := strings.SplitN(mdown, "\n", 2)
+	slidetype := strings.Trim(splits[0], " \t")
+	_ = slidetype // TODO(augie): figure out how to use this data
+	splits = strings.SplitN(splits[1], ".notes", 2)
+	content := strings.Trim(splits[0], " \t\r\n")
+	notes := ""
+	if len(splits) == 2 {
+		notes = strings.Trim(splits[1], " \t\r\n")
+	}
+
+	p := markdown.NewParser(&markdown.Extensions{})
+	dest := bytes.NewBuffer(nil)
+	p.Markdown(bytes.NewBuffer([]byte(content)), markdown.ToHTML(dest))
+	rendered := dest.String()
+	// TODO(augie): stop using this horrible hack for images!
+	rendered = strings.Replace(rendered, "<img src=\"", "<img src=\"images/", -1)
+	return rendered, notes
 }
 
 func slidehandler(w http.ResponseWriter, r *http.Request) {
