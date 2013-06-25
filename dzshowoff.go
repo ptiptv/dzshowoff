@@ -35,6 +35,7 @@ type show struct {
 	Title  string
 	Slides []slide
 	View   viewport
+	Images map[string]string // map of basename to full filesystem path
 }
 
 func (v viewport) HeightHalf() int {
@@ -68,6 +69,7 @@ func loadslides() show {
 		log.Fatalf("Error parsing json: %v", err)
 	}
 	allslides := bytes.NewBuffer(nil)
+	images := make(map[string]string)
 	for _, section := range raw.Sections {
 		sectionDir := path.Join(*slidesDir, section.Section)
 		files, err := ioutil.ReadDir(sectionDir)
@@ -75,8 +77,12 @@ func loadslides() show {
 			log.Fatalf("error reading section: %v", err)
 		}
 		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
 			n := f.Name()
-			if !strings.HasSuffix(n, ".md") || f.IsDir() {
+			if !strings.HasSuffix(n, ".md") {
+				images[n] = path.Join(sectionDir, n)
 				continue
 			}
 			fp := path.Join(sectionDir, n)
@@ -114,7 +120,8 @@ func loadslides() show {
 		p.Markdown(bytes.NewBuffer([]byte(content)), markdown.ToHTML(dest))
 
 		slides = append(slides, slide{
-			Content: dest.String(),
+			// TODO(augie): stop using this horrible hack for images!
+			Content: strings.Replace(dest.String(), "<img src=\"", "<img src=\"images/", -1),
 			Notes:   notes,
 		})
 	}
@@ -125,6 +132,7 @@ func loadslides() show {
 			Height: 768,
 			Width:  1024,
 		},
+		Images: images,
 	}
 }
 
@@ -152,10 +160,29 @@ func presRedir(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/presenter/#/", http.StatusFound)
 }
 
+func images(w http.ResponseWriter, r *http.Request) {
+	deck := loadslides()
+	components := strings.Split(r.URL.Path, "/")
+	basename := components[len(components)-1]
+	path := deck.Images[strings.Trim(basename, "/")]
+	if path == "" {
+		http.NotFound(w, r)
+	}
+	d, err := ioutil.ReadFile(path)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+	if strings.HasSuffix(basename, ".svg") {
+		w.Header().Add("Content-Type", "image/svg+xml")
+	}
+	w.Write(d)
+}
+
 func serve() {
 	s := http.NewServeMux()
 	s.HandleFunc("/", slidehandler)
 	s.HandleFunc("/p", presRedir)
+	s.HandleFunc("/images/", images)
 	s.HandleFunc("/presenter", presenter)
 	s.HandleFunc("/presenter/", presenter)
 	log.Printf("Starting webserver on http://localhost:%d", *port)
