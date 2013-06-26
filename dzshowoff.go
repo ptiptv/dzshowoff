@@ -13,7 +13,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/knieriem/markdown"
+	"github.com/russross/blackfriday"
 )
 
 var (
@@ -60,7 +60,6 @@ func loadslides() show {
 	if err != nil {
 		log.Fatalf("Error opening %s: %v", jsonPath, err)
 	}
-	_ = markdown.APOSTROPHE
 
 	dec := json.NewDecoder(j)
 	var raw showoffjson
@@ -132,10 +131,8 @@ func htmlSlide(mdown string) (string, string) {
 		notes = strings.Trim(splits[1], " \t\r\n")
 	}
 
-	p := markdown.NewParser(&markdown.Extensions{})
-	dest := bytes.NewBuffer(nil)
-	p.Markdown(bytes.NewBuffer([]byte(content)), markdown.ToHTML(dest))
-	rendered := dest.String()
+	r := blackfriday.HtmlRenderer(blackfriday.HTML_OMIT_CONTENTS|blackfriday.HTML_SKIP_STYLE, "", "")
+	rendered := string(blackfriday.Markdown([]byte(content), r, 0))
 	// TODO(augie): stop using this horrible hack for images!
 	rendered = strings.Replace(rendered, "<img src=\"", "<img src=\"images/", -1)
 	return rendered, notes
