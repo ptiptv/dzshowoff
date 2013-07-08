@@ -52,6 +52,7 @@ type showoffsection struct {
 type showoffjson struct {
 	Name     string           `json:"name,omitempty"`
 	Sections []showoffsection `json:"sections,omitempty"`
+	View     viewport         `json:"view,omitempty"`
 }
 
 func loadslides() show {
@@ -107,13 +108,17 @@ func loadslides() show {
 			Notes:   notes,
 		})
 	}
+	view := viewport{
+		Height: 768,
+		Width:  1024,
+	}
+	if raw.View.Height != 0 && raw.View.Width != 0 {
+		view = raw.View
+	}
 	return show{
 		Title:  raw.Name,
 		Slides: slides,
-		View: viewport{
-			Height: 768,
-			Width:  1024,
-		},
+		View: view,
 		Images: images,
 	}
 }
