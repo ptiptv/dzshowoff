@@ -21,6 +21,39 @@ var (
 	slidesDir = flag.String("slidesRoot", ".", "root dir of slides")
 )
 
+const (
+	showoffCss = `
+.bullets > ul {
+	list-style: none;
+}
+.bullets > ul > li {
+	text-align: center;
+}
+
+.innerContent ul ul {
+	list-style: disc;
+	text-align: left;
+}
+
+.bullets ul ul > li { font-size: 80%; }
+
+li {
+	font-size: 150%;
+	margin-left: 0.5em;
+}
+
+h1 {
+	margin-top: 0px;
+}
+section > div {
+	vertical-align: middle;
+	display: table-cell;
+	height: {{.View.Height}}px;
+	width: {{.View.Width}}px;
+}
+`
+)
+
 type slide struct {
 	Content string
 	Notes   string
@@ -36,6 +69,7 @@ type show struct {
 	Slides []slide
 	View   viewport
 	Images map[string]string // map of basename to full filesystem path
+	Css    string            //extra CSS to inject into template
 }
 
 func (v viewport) HeightHalf() int {
@@ -115,11 +149,20 @@ func loadslides() show {
 	if raw.View.Height != 0 && raw.View.Width != 0 {
 		view = raw.View
 	}
+	t := template.New("inline css")
+	css := template.Must(t.Parse(showoffCss))
+	cssBuf := bytes.NewBuffer(nil)
+	err = css.Execute(cssBuf, struct { View viewport} { View: view})
+	if err != nil {
+		panic(fmt.Errorf("Fatal error rendering inline CSS: %v", err))
+	}
+	finalCss, err := ioutil.ReadAll(cssBuf)
 	return show{
 		Title:  raw.Name,
 		Slides: slides,
-		View: view,
+		View:   view,
 		Images: images,
+		Css:    string(finalCss),
 	}
 }
 
@@ -128,7 +171,17 @@ func loadslides() show {
 func htmlSlide(mdown string) (string, string) {
 	splits := strings.SplitN(mdown, "\n", 2)
 	slidetype := strings.Trim(splits[0], " \t")
-	_ = slidetype // TODO(augie): figure out how to use this data
+	style := ""
+	class := ""
+	switch slidetype {
+	case "", "center":
+		class = "center"
+		style += "text-align: center; "
+	case "bullets":
+		class = "bullets"
+	default:
+		panic(fmt.Errorf("invalid slide type %v", slidetype))
+	}
 	splits = strings.SplitN(splits[1], ".notes", 2)
 	content := strings.Trim(splits[0], " \t\r\n")
 	notes := ""
@@ -140,6 +193,8 @@ func htmlSlide(mdown string) (string, string) {
 	rendered := string(blackfriday.Markdown([]byte(content), r, 0))
 	// TODO(augie): stop using this horrible hack for images!
 	rendered = strings.Replace(rendered, "<img src=\"", "<img src=\"images/", -1)
+	rendered = fmt.Sprintf("<div class=\"%s innerContent\" style=\"%s\">%s</div>",
+		class, style, rendered)
 	return rendered, notes
 }
 
