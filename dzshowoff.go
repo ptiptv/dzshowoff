@@ -186,7 +186,7 @@ func htmlSlide(mdown string) (string, string) {
 		panic(fmt.Errorf("invalid slide type %v", slidetype))
 	}
 	splits = strings.SplitN(splits[1], ".notes", 2)
-	content := strings.Trim(splits[0], " \t\r\n")
+	content := splits[0]
 	notes := ""
 	if len(splits) == 2 {
 		notes = strings.Trim(splits[1], " \t\r\n")
