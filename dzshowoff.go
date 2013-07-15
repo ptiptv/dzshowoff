@@ -174,7 +174,10 @@ func htmlSlide(mdown string) (string, string) {
 	style := ""
 	class := ""
 	switch slidetype {
-	case "", "center":
+	case "":
+		class = "default"
+		style += " padding: 2em; "
+	case "center":
 		class = "center"
 		style += "text-align: center; "
 	case "bullets":
