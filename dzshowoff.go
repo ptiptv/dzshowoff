@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -166,6 +167,10 @@ func loadslides() show {
 	}
 }
 
+var (
+	renderedCodeBlock = regexp.MustCompile("<pre><code>@@@( *[^\n]*)\n")
+)
+
 // htmlSlide transforms the markdown slide source into html for a
 // slide, and a string of the speaker notes for that slide.
 func htmlSlide(mdown string) (string, string) {
@@ -191,6 +196,7 @@ func htmlSlide(mdown string) (string, string) {
 	if len(splits) == 2 {
 		notes = strings.Trim(splits[1], " \t\r\n")
 	}
+	postProcessCodeBlocks := strings.Contains(content, "    @@@")
 
 	r := blackfriday.HtmlRenderer(blackfriday.HTML_OMIT_CONTENTS|blackfriday.HTML_SKIP_STYLE, "", "")
 	rendered := string(blackfriday.Markdown([]byte(content), r, 0))
@@ -198,6 +204,18 @@ func htmlSlide(mdown string) (string, string) {
 	rendered = strings.Replace(rendered, "<img src=\"", "<img src=\"images/", -1)
 	rendered = fmt.Sprintf("<div class=\"%s innerContent\" style=\"%s\">%s</div>",
 		class, style, rendered)
+	// TODO(augie): stop using this horrible hack for code blocks!
+	if postProcessCodeBlocks {
+		rendered = renderedCodeBlock.ReplaceAllStringFunc(rendered, func(match string) string {
+			parts := strings.SplitN(match, "@@@", 2)
+			lang := ""
+			if len(parts) > 1 {
+				lang = strings.TrimSpace(parts[1])
+				return fmt.Sprintf("<pre class=\"sh_%s sh_sourceCode\"><code>\n", lang)
+			}
+			return "<pre class=\"sh_sourceCode\"><code>\n"
+		})
+	}
 	return rendered, notes
 }
 
