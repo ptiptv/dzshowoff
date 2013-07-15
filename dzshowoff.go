@@ -105,6 +105,7 @@ type showoffjson struct {
 func loadslides() show {
 	jsonPath := path.Join(*slidesDir, "showoff.json")
 	j, err := os.Open(jsonPath)
+	defer j.Close()
 	if err != nil {
 		log.Fatalf("Error opening %s: %v", jsonPath, err)
 	}
@@ -134,6 +135,7 @@ func loadslides() show {
 			}
 			fp := path.Join(sectionDir, n)
 			fd, err := os.Open(fp)
+			defer fd.Close()
 			if err != nil {
 				log.Fatalf("Error opening file %v: %v", fp, err)
 			}
