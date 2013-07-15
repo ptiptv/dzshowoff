@@ -53,6 +53,13 @@ section > div {
 	width: {{.View.Width}}px;
 }
 `
+
+	showoffExtraHead = `
+<script type="text/javascript" src="/shjs/sh_main.min.js"></script>
+<link type="text/css" rel="stylesheet" href="/shjs/css/sh_emacs.min.css">
+`
+
+	showoffOnload = "sh_highlightDocument('shjs/lang/', '.min.js');"
 )
 
 type slide struct {
@@ -66,11 +73,13 @@ type viewport struct {
 }
 
 type show struct {
-	Title  string
-	Slides []slide
-	View   viewport
-	Images map[string]string // map of basename to full filesystem path
-	Css    string            //extra CSS to inject into template
+	Title     string
+	Slides    []slide
+	View      viewport
+	Images    map[string]string // map of basename to full filesystem path
+	Css       string            //extra CSS to inject into template
+	ExtraHead string            // extra junk to put inside the head element
+	Onload    string            // javascript to run after the dzslides js, if any
 }
 
 func (v viewport) HeightHalf() int {
@@ -153,17 +162,19 @@ func loadslides() show {
 	t := template.New("inline css")
 	css := template.Must(t.Parse(showoffCss))
 	cssBuf := bytes.NewBuffer(nil)
-	err = css.Execute(cssBuf, struct { View viewport} { View: view})
+	err = css.Execute(cssBuf, struct{ View viewport }{View: view})
 	if err != nil {
 		panic(fmt.Errorf("Fatal error rendering inline CSS: %v", err))
 	}
 	finalCss, err := ioutil.ReadAll(cssBuf)
 	return show{
-		Title:  raw.Name,
-		Slides: slides,
-		View:   view,
-		Images: images,
-		Css:    string(finalCss),
+		Title:     raw.Name,
+		Slides:    slides,
+		View:      view,
+		Images:    images,
+		Css:       string(finalCss),
+		ExtraHead: showoffExtraHead,
+		Onload:    showoffOnload,
 	}
 }
 
@@ -263,6 +274,8 @@ func images(w http.ResponseWriter, r *http.Request) {
 
 func serve() {
 	s := http.NewServeMux()
+	shpath := "/shjs/"
+	s.Handle(shpath, http.StripPrefix(shpath, http.FileServer(http.Dir("third_party/shjs"))))
 	s.HandleFunc("/", slidehandler)
 	s.HandleFunc("/p", presRedir)
 	s.HandleFunc("/images/", images)

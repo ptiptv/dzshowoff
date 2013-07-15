@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 
 <meta charset="utf-8">
+<head>
 <title>{{.Title}}</title>
+{{.ExtraHead}}
+</head>
 
 {{range .Slides}}
 <section>
@@ -628,6 +631,8 @@
   $$.forEach = function(nodeList, fun) {
     Array.prototype.forEach.call(nodeList, fun);
   }
+
+{{if .Onload }}{{.Onload}}{{end}}
 
 </script>
 <!-- vim: set fdm=marker: }}} -->
