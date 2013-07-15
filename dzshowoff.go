@@ -15,6 +15,9 @@ import (
 	"text/template"
 
 	"github.com/russross/blackfriday"
+
+	"hg.durin42.com/dzshowoff/templates"
+	"hg.durin42.com/dzshowoff/third_party/shjs"
 )
 
 var (
@@ -231,23 +234,20 @@ func htmlSlide(mdown string) (string, string) {
 }
 
 func slidehandler(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.ParseFiles("template.html"))
-	err := t.Execute(w, loadslides())
+	t := template.New("template.html")
+	t, err := t.Parse(string(templates.Files["templates/template.html"]))
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error loading base template: %v", err)))
+		return
+	}
+	err = t.Execute(w, loadslides())
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Error rendering slides: %v", err)))
 	}
 }
 
 func presenter(w http.ResponseWriter, r *http.Request) {
-	f, err := os.Open("onstage.html")
-	if err != nil {
-		panic(err)
-	}
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		panic(err)
-	}
-	w.Write(data)
+	w.Write(templates.Files["templates/onstage.html"])
 }
 
 func presRedir(w http.ResponseWriter, r *http.Request) {
@@ -272,10 +272,22 @@ func images(w http.ResponseWriter, r *http.Request) {
 	w.Write(d)
 }
 
+// TODO(augie): replace this with an http.FileSystem implementation in shjs.go
+type shjsServer struct{}
+
+func (s *shjsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fn := r.URL.Path
+
+	data := shjs.Files[fn]
+	if len(data) > 0 {
+		w.Write(data)
+	}
+}
+
 func serve() {
 	s := http.NewServeMux()
 	shpath := "/shjs/"
-	s.Handle(shpath, http.StripPrefix(shpath, http.FileServer(http.Dir("third_party/shjs"))))
+	s.Handle(shpath, http.StripPrefix(shpath, &shjsServer{}))
 	s.HandleFunc("/", slidehandler)
 	s.HandleFunc("/p", presRedir)
 	s.HandleFunc("/images/", images)
