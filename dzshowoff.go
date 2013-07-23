@@ -237,7 +237,7 @@ func htmlSlide(mdown string) (string, string) {
 
 func slidehandler(w http.ResponseWriter, r *http.Request) {
 	t := template.New("template.html")
-	t, err := t.Parse(string(templates.Files["templates/template.html"]))
+	t, err := t.Parse(string(templates.Files["template.html"]))
 	if err != nil {
 		w.Write([]byte(fmt.Sprintf("Error loading base template: %v", err)))
 		return
@@ -249,7 +249,7 @@ func slidehandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func presenter(w http.ResponseWriter, r *http.Request) {
-	w.Write(templates.Files["templates/onstage.html"])
+	w.Write(templates.Files["onstage.html"])
 }
 
 func presRedir(w http.ResponseWriter, r *http.Request) {
