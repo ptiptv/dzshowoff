@@ -282,6 +282,9 @@ func (s *shjsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	data := shjs.Files[fn]
 	if len(data) > 0 {
+		if strings.HasSuffix(fn, ".css") {
+			w.Header().Add("Content-Type", "text/css")
+		}
 		w.Write(data)
 	}
 }
