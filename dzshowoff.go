@@ -1,10 +1,12 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -236,15 +238,49 @@ func htmlSlide(mdown string) (string, string) {
 }
 
 func slidehandler(w http.ResponseWriter, r *http.Request) {
+	err := rendershow(w, loadslides())
+	if err != nil {
+		w.Write([]byte(fmt.Sprintf("Error rendering slides: %v", err)))
+	}
+}
+
+func rendershow(w io.Writer, deck show) error {
 	t := template.New("template.html")
 	t, err := t.Parse(string(templates.Files["template.html"]))
 	if err != nil {
-		w.Write([]byte(fmt.Sprintf("Error loading base template: %v", err)))
-		return
+		return err
 	}
-	err = t.Execute(w, loadslides())
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("Error rendering slides: %v", err)))
+	return t.Execute(w, deck)
+}
+
+func maybeDie(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+func archiveHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if err := recover(); err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
+		}
+	}()
+	deck := loadslides()
+	w.Header().Add("Content-Disposition",
+		fmt.Sprintf("attachment; filename=\"%s.zip\"", deck.Title))
+	zw := zip.NewWriter(w)
+	defer zw.Close()
+	fw, err := zw.Create("index.html")
+	maybeDie(err)
+	err = rendershow(fw, deck)
+	maybeDie(err)
+	for name, fullpath := range deck.Images {
+		fw, err := zw.Create(path.Join("images", name))
+		maybeDie(err)
+		r, err := os.Open(fullpath)
+		maybeDie(err)
+		_, err = io.Copy(fw, r)
+		maybeDie(err)
 	}
 }
 
@@ -298,8 +334,11 @@ func serve() {
 	s.HandleFunc("/images/", images)
 	s.HandleFunc("/presenter", presenter)
 	s.HandleFunc("/presenter/", presenter)
+	s.HandleFunc("/archive", archiveHandler)
+	s.HandleFunc("/archive/", archiveHandler)
 	log.Printf("Starting webserver on http://localhost:%d", *port)
 	log.Printf("Presenter display on http://localhost:%d/p", *port)
+	log.Printf("Archive available from http://localhost:%d/archive", *port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), s))
 }
 
