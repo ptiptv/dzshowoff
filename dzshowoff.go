@@ -18,8 +18,8 @@ import (
 
 	"github.com/russross/blackfriday"
 
-	"hg.durin42.com/dzshowoff/templates"
-	"hg.durin42.com/dzshowoff/third_party/shjs"
+	"code.google.com/p/dzshowoff/templates"
+	"code.google.com/p/dzshowoff/third_party/shjs"
 )
 
 var (
