@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf8">
+<title>{{.Title}}</title>
+</head>
+<body>
+<style>
+  iframe {
+    border: none;
+    background-color: white;
+    height: 100%;
+    width: 100%;
+  }
+  .slides{
+    width:800px;
+    height: 600px;
+  }
+  .notes {
+    width:800px;
+    page-break-after: always
+  }
+  @page{
+    size: 16cm 12cm;
+  }
+</style>
+
+{{range .Slides}}
+<iframe allowfullscreen mozallowfullscreen webkitallowfullscreen
+        class="slides" src="http://{{.Host}}/#{{.Index}}.0"></iframe>
+<div class="notes">{{.Notes}}</div>
+{{end}}
+
+</body>
+</html>

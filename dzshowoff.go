@@ -301,6 +301,42 @@ func presRedir(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/presenter/#/", http.StatusFound)
 }
 
+type printableSlide struct {
+		Index int
+		Notes string
+		Host string // workaround because I fail at Go templates
+}
+type printableData struct {
+	Title string
+	Slides []printableSlide
+}
+
+func printable(w http.ResponseWriter, r *http.Request) {
+	t := template.New("printable.html")
+	t, err := t.Parse(string(templates.Files["printable.html"]))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("template parse error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	deck := loadslides()
+	pd := &printableData {
+		Title: deck.Title,
+	}
+	host := fmt.Sprintf("localhost:%d", *port)
+	for idx, s := range deck.Slides {
+		pd.Slides = append(pd.Slides, printableSlide{
+			Index: idx + 1,
+			Notes: s.Notes,
+			Host: host,
+		})
+	}
+
+	err = t.Execute(w, pd)
+	if err != nil {
+		log.Printf("Error during print render: %v", err)
+	}
+}
+
 func images(w http.ResponseWriter, r *http.Request) {
 	deck := loadslides()
 	components := strings.Split(r.URL.Path, "/")
@@ -345,9 +381,12 @@ func serve() {
 	s.HandleFunc("/presenter/", presenter)
 	s.HandleFunc("/archive", archiveHandler)
 	s.HandleFunc("/archive/", archiveHandler)
+	s.HandleFunc("/print", printable)
+	s.HandleFunc("/print/", printable)
 	log.Printf("Starting webserver on http://localhost:%d", *port)
 	log.Printf("Presenter display on http://localhost:%d/p", *port)
 	log.Printf("Archive available from http://localhost:%d/archive", *port)
+	log.Printf("Printable format at http://localhost:%d/print/", *port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), s))
 }
 
