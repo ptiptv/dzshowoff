@@ -65,6 +65,12 @@ section > div {
 `
 
 	showoffOnload = "sh_highlightDocument('shjs/lang/', '.min.js');"
+
+	baseJson = `{"name": "Talk Title",
+ "sections": [
+		{"section": "title"}
+	]
+}`
 )
 
 type slide struct {
@@ -345,18 +351,41 @@ func serve() {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), s))
 }
 
+func checkSlidesDir(dir string) error {
+	if s, err := os.Stat(path.Join(dir, "showoff.json")); os.IsNotExist(err) || s.IsDir() {
+		return fmt.Errorf("Invalid slide dir %v", dir)
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 
-	if s, err := os.Stat(path.Join(*slidesDir, "showoff.json")); os.IsNotExist(err) || s.IsDir() {
-		log.Fatalf("Invalid slide dir %v", *slidesDir)
-	}
-	log.Printf("Loading slides from %v", *slidesDir)
 	subcmd := flag.Arg(0)
 	switch subcmd {
 	case "serve":
+		if err := checkSlidesDir(*slidesDir); err != nil {
+			log.Fatal(err)
+		}
 		serve()
+	case "init":
+		err := checkSlidesDir(*slidesDir)
+		if err == nil {
+			log.Fatalf("init: slides dir %s already exists!", *slidesDir)
+		}
+		if err = os.MkdirAll(*slidesDir, 0755); err != nil {
+			log.Fatalf("init: mkdir failed: %s", err)
+		}
+		f, err := os.Create(path.Join(*slidesDir, "showoff.json"))
+		if err != nil {
+			log.Fatalf("init: showoff.json failed: %s", err)
+		}
+		defer f.Close()
+		_, err = f.Write([]byte(baseJson))
+		if err != nil {
+			log.Fatalf("init: could not write to showoff.json: %s", err)
+		}
 	default:
-		log.Fatal("Missing a subcommand. Valid subcommands are: serve, ...")
+		log.Fatal("Missing a subcommand. Valid subcommands are: serve, init")
 	}
 }
