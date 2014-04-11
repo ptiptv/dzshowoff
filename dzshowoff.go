@@ -131,6 +131,9 @@ func loadslides() show {
 				continue
 			}
 			n := f.Name()
+			if strings.HasPrefix(n, ".") {
+				continue
+			}
 			if !strings.HasSuffix(n, ".md") {
 				images[n] = path.Join(sectionDir, n)
 				continue
