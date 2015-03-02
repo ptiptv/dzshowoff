@@ -88,7 +88,7 @@ type show struct {
 	Slides    []slide
 	View      viewport
 	Images    map[string]string // map of basename to full filesystem path
-	Css       string            //extra CSS to inject into template
+	Css       string            // extra CSS to inject into template
 	ExtraHead string            // extra junk to put inside the head element
 	Onload    string            // javascript to run after the dzslides js, if any
 }
