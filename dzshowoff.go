@@ -302,12 +302,12 @@ func presRedir(w http.ResponseWriter, r *http.Request) {
 }
 
 type printableSlide struct {
-		Index int
-		Notes string
-		Host string // workaround because I fail at Go templates
+	Index int
+	Notes string
+	Host  string // workaround because I fail at Go templates
 }
 type printableData struct {
-	Title string
+	Title  string
 	Slides []printableSlide
 }
 
@@ -319,7 +319,7 @@ func printable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	deck := loadslides()
-	pd := &printableData {
+	pd := &printableData{
 		Title: deck.Title,
 	}
 	host := fmt.Sprintf("localhost:%d", *port)
@@ -327,7 +327,7 @@ func printable(w http.ResponseWriter, r *http.Request) {
 		pd.Slides = append(pd.Slides, printableSlide{
 			Index: idx + 1,
 			Notes: s.Notes,
-			Host: host,
+			Host:  host,
 		})
 	}
 
