@@ -108,6 +108,7 @@ type showoffjson struct {
 	Name     string           `json:"name,omitempty"`
 	Sections []showoffsection `json:"sections,omitempty"`
 	View     viewport         `json:"view,omitempty"`
+	Css      string           `json:"css,omitempty"`
 }
 
 func loadslides() show {
@@ -182,13 +183,25 @@ func loadslides() show {
 	if err != nil {
 		panic(fmt.Errorf("Fatal error rendering inline CSS: %v", err))
 	}
-	finalCss, err := ioutil.ReadAll(cssBuf)
+	finalCssBytes, err := ioutil.ReadAll(cssBuf)
+	finalCss := string(finalCssBytes)
+	if raw.Css != "" {
+		fd, err := os.Open(raw.Css)
+		if err != nil {
+			log.Fatalf("Error opening CSS %v: %v", raw.Css, err)
+		}
+		data, err := ioutil.ReadAll(fd)
+		if err != nil {
+			log.Fatalf("Error reading CSS %v: %v", raw.Css, err)
+		}
+		finalCss = finalCss + "\n\n" + string(data)
+	}
 	return show{
 		Title:     raw.Name,
 		Slides:    slides,
 		View:      view,
 		Images:    images,
-		Css:       string(finalCss),
+		Css:       finalCss,
 		ExtraHead: showoffExtraHead,
 		Onload:    showoffOnload,
 	}
