@@ -1,0 +1,1 @@
+dzshowoff is a tool to convert showoff format slides to dzslides format. showoff's slide format has worked well for me over the past couple years, but adding features to showoff got difficult, so I wrote something to emit dzslides format instead.
